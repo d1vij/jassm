@@ -13,11 +13,11 @@ JASSM is a simple abstraction layer over [mdx-js](https://mdxjs.com/) and its vi
 1. Install jassm
 
 ```bash
-npm install jassm
+npm install @d1vij/jassm
 # OR
-pnpm add jassm
+pnpm add @d1vij/jassm
 # OR
-bun add jassm
+bun add @d1vij/jassm
 ```
 
 2. Setup vite plugin in vite config

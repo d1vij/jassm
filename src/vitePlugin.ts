@@ -1,6 +1,6 @@
 import mdx, { type Options as MDXOptions } from "@mdx-js/rollup";
-import type { Plugin } from "vite";
 import remarkGFM from "remark-gfm";
+import type { Plugin } from "vite";
 
 /**
  * Vite plugin to support MDX conversion.

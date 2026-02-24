@@ -4,6 +4,7 @@ import BlockQuote from "./BlockQuote";
 import { Bold } from "./Bold";
 import Code from "./Code";
 import { Header } from "./Heading";
+import HorizontalLine from "./HorizontalLine";
 import Image from "./Image";
 import { Italics } from "./Italics";
 import List, { ListItem } from "./List";
@@ -18,7 +19,6 @@ import {
     TableHeadCell,
     TableRow,
 } from "./Table";
-import HorizontalLine from "./HorizontalLine";
 
 export const Elements: MDXComponents = {
     // Headings
