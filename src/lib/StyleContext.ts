@@ -5,6 +5,7 @@ import { createContext, useContext } from "react";
  */
 export const StyleClassesList = [
     "header",
+    "header_button",
     "header_1",
     "header_2",
     "header_3",

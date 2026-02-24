@@ -50,7 +50,6 @@ export function generateRegistry<
     for (const [virtual, path] of Object.entries(records)) {
         const src = `${source}${path}`;
         const loader = modules[src] as ImportedModule;
-        console.log(loader);
         if (!loader) {
             throw new Error(`No such file exsits as ${src}`);
         }

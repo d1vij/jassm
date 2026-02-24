@@ -8,6 +8,7 @@ export type MDXFromComponentProps = {
     SourceComponent: React.ComponentType<MDXProps>;
     styles: StyleClassesMap;
     elements?: MDXComponents;
+    fallback?: React.ReactNode;
 };
 
 /**
@@ -16,11 +17,12 @@ export type MDXFromComponentProps = {
 export function MDXFromComponent({
     SourceComponent,
     styles,
+    fallback,
     elements = Elements,
 }: MDXFromComponentProps): JSX {
     return (
         <StyleContext value={styles}>
-            <Suspense>
+            <Suspense fallback={fallback}>
                 <SourceComponent components={elements} />
             </Suspense>
         </StyleContext>

@@ -18,6 +18,7 @@ import {
     TableHeadCell,
     TableRow,
 } from "./Table";
+import HorizontalLine from "./HorizontalLine";
 
 export const Elements: MDXComponents = {
     // Headings
@@ -36,6 +37,7 @@ export const Elements: MDXComponents = {
     blockquote: BlockQuote,
     pre: Preformatted,
     p: Paragraph,
+    hr: HorizontalLine,
 
     ol: (props) => List({ ...props, type: "ordered" }),
     ul: (props) => List({ ...props, type: "unordered" }),
@@ -50,7 +52,5 @@ export const Elements: MDXComponents = {
     tr: TableRow,
     td: TableData,
 };
-
-// function H1(props: ComponentProps)
 
 export default Elements;

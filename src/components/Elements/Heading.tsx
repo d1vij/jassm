@@ -44,6 +44,7 @@ export function Header(
                 onClick={() => void handleClick()} // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/void
                 ref={headerRef}
                 id={id}
+                className={cn(styles.header_button)}
                 type="button"
             >
                 {props.children}

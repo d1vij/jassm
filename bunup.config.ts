@@ -1,7 +1,7 @@
 import { defineConfig } from "bunup";
 
 export default defineConfig({
-    entry: ["src/index.tsx", "src/vitePlugin.ts"],
+    entry: ["src/index.ts", "src/vitePlugin.ts"],
     format: ["esm"],
     dts: true,
     clean: true,
