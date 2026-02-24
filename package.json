@@ -1,7 +1,7 @@
 {
     "name": "jassm",
     "description": "Just another static site maker. Create simple content driven sites using MDX and React along with Typescript safety.",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "module",
     "files": [
         "dist"
