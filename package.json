@@ -23,9 +23,9 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/d1vij/react-mdx-loader"
+        "url": "https://github.com/d1vij/jassm"
     },
-    "homepage": "https://github.com/d1vij/react-mdx-loader",
+    "homepage": "https://github.com/d1vij/jassm",
     "license": "MIT",
     "sideEffects": false,
     "publishConfig": {
