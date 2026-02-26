@@ -4,7 +4,7 @@
  * Has 'dev time' as well as compile time safety
  */
 
-import { lazy, type ExoticComponent } from "react";
+import { lazy } from "react";
 
 /**
  * File extension(s) to accept
