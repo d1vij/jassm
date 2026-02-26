@@ -148,7 +148,7 @@ export function generateRegistries<
 /**
  * The returned export object has the type of {@link React.ComponentType} + whatever user passes
  */
-export type ExportSingleType<T> = T & { default: React.ComponentType };
+export type ExportSingleType<T> = Promise<T & { default: React.ComponentType }>;
 export type ExportAllType<T> = {
     [K in keyof T]: ExportSingleType<T[K]>;
 };
