@@ -1,7 +1,7 @@
 {
     "name": "@d1vij/jassm",
     "description": "Just another static site maker. Create simple content driven sites using MDX and React along with Typescript safety.",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "type": "module",
     "files": [
         "dist"
