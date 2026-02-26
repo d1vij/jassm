@@ -4,7 +4,7 @@
  * Has 'dev time' as well as compile time safety
  */
 
-import { lazy } from "react";
+import { lazy, type ExoticComponent } from "react";
 
 /**
  * File extension(s) to accept
@@ -146,6 +146,14 @@ export function generateRegistries<
 }
 
 /**
+ * The returned export object has the type of {@link React.ComponentType} + whatever user passes
+ */
+export type ExportSingleType<T> = T & { default: React.ComponentType };
+export type ExportAllType<T> = {
+    [K in keyof T]: ExportSingleType<T[K]>;
+};
+
+/**
  * Wrapper class over {@link generateRegistries}. Provides methods to access components and exports from typesafe keys
  */
 export class Registry<
@@ -170,16 +178,21 @@ export class Registry<
         return this.components[key];
     }
 
-    public getExport(
-        key: RegistryKey<S, M, R>,
-    ): ExportsRegistry<S, M, R>[RegistryKey<S, M, R>] {
-        return this.exports[key];
-    }
-
     public getComponents(): ComponentRegistry<S, M, R> {
         return this.components;
     }
-    public getExports(): ExportsRegistry<S, M, R> {
-        return this.exports;
+
+    public getExport<T extends object = object>(
+        key: RegistryKey<S, M, R>,
+    ): ExportSingleType<T> {
+        return this.exports[key] as ExportSingleType<T>;
+    }
+    public getExports<
+        T extends Record<RegistryKey<S, M, R>, object> = Record<
+            RegistryKey<S, M, R>,
+            object
+        >,
+    >(): ExportAllType<T> {
+        return this.exports as unknown as ExportAllType<T>;
     }
 }
