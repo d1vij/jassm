@@ -23,7 +23,7 @@ type MustNotEndWithSlash<T extends string> = T extends `${string}/` ? never : T;
 /**
  * Options passed to {@link generateRegistries}
  */
-export type MDXRegistryOptions<
+export type RegistryOptions<
     /**
      * Source
      */
@@ -43,15 +43,15 @@ export type MDXRegistryOptions<
      */
     modules: Record<string, () => Promise<unknown>>;
     /**
-     *  Directory from which to resolve the source paths in {@link MDXRegistryOptions.records}
+     *  Directory from which to resolve the source paths in {@link RegistryOptions.records}
      */
     source: MustNotEndWithSlash<S> & MustStartWithSlash<S>;
     /**
-     * Virtual base path on which to mount the key of {@link MDXRegistryOptions.records}
+     * Virtual base path on which to mount the key of {@link RegistryOptions.records}
      */
     mountOn: MustNotEndWithSlash<M> & MustStartWithSlash<M>;
     /**
-     * Mappings of virtual path to file paths under {@link MDXRegistryOptions.source}
+     * Mappings of virtual path to file paths under {@link RegistryOptions.source}
      */
     records: {
         // if key is a string
@@ -77,7 +77,7 @@ export type RegistryKey<
 > = keyof RegistryOf<unknown, S, M, R>;
 
 /**
- * Constructor for any generic registry with keys in the format of `mount-path/virtual-path` for each virual path passed in {@link MDXRegistryOptions.records}
+ * Constructor for any generic registry with keys in the format of `mount-path/virtual-path` for each virual path passed in {@link RegistryOptions.records}
  */
 export type RegistryOf<
     T,
@@ -85,11 +85,11 @@ export type RegistryOf<
     M extends string,
     R extends Record<string, string>,
 > = {
-    [K in keyof MDXRegistryOptions<
+    [K in keyof RegistryOptions<
         S,
         M,
         R
-    >["records"] as `${MDXRegistryOptions<S, M, R>["mountOn"]}${Extract<K, string>}`]: T;
+    >["records"] as `${RegistryOptions<S, M, R>["mountOn"]}${Extract<K, string>}`]: T;
 };
 
 /**
@@ -124,7 +124,7 @@ export function generateRegistries<
     source,
     mountOn,
     records,
-}: MDXRegistryOptions<S, M, R>): [
+}: RegistryOptions<S, M, R>): [
     ComponentRegistry<S, M, R>,
     ExportsRegistry<S, M, R>,
 ] {
@@ -153,6 +153,35 @@ export type ExportAllType<T> = {
     [K in keyof T]: ExportSingleType<T[K]>;
 };
 
+abstract class AbstractRegistry<
+    C extends Record<string, React.LazyExoticComponent<React.ComponentType>>,
+    E extends Record<string, unknown>,
+> {
+    abstract components: C;
+    abstract exports: E;
+
+    public getComponent<K extends keyof C>(key: K): C[K] {
+        // this shouldnt be undefined since build time safety
+        // from invalid paths is provided by vite
+        return this.components[key];
+    }
+
+    public getComponents(): C {
+        return this.components;
+    }
+
+    public getExport<T extends object, K extends keyof E>(
+        key: K,
+    ): ExportSingleType<T> {
+        return this.exports[key] as ExportSingleType<T>;
+    }
+    public getExports<
+        T extends Record<keyof C, object> = Record<keyof C, object>,
+    >(): ExportAllType<T> {
+        return this.exports as unknown as ExportAllType<T>;
+    }
+}
+
 /**
  * Wrapper class over {@link generateRegistries}. Provides methods to access components and exports from typesafe keys
  */
@@ -160,39 +189,63 @@ export class Registry<
     S extends string,
     M extends string,
     R extends Record<string, string>,
+> extends AbstractRegistry<
+    ComponentRegistry<S, M, R>,
+    ExportsRegistry<S, M, R>
 > {
-    private readonly components: ComponentRegistry<S, M, R>;
-    private readonly exports: ExportsRegistry<S, M, R>;
-
-    constructor(registryOpts: MDXRegistryOptions<S, M, R>) {
+    readonly components: ComponentRegistry<S, M, R>;
+    readonly exports: ExportsRegistry<S, M, R>;
+    constructor(registryOpts: RegistryOptions<S, M, R>) {
+        super();
         [this.components, this.exports] = generateRegistries<S, M, R>(
             registryOpts,
         );
     }
+}
 
-    public getComponent(
-        key: RegistryKey<S, M, R>,
-    ): ComponentRegistry<S, M, R>[RegistryKey<S, M, R>] {
-        // this shouldnt be undefined since build time safety
-        // from invalid paths is provided by vite
-        return this.components[key];
-    }
+type UnionToIntersection<U> = (
+    U extends unknown
+        ? (k: U) => void
+        : never
+) extends (k: infer I) => void
+    ? I
+    : never;
 
-    public getComponents(): ComponentRegistry<S, M, R> {
-        return this.components;
-    }
+/**
+ * Registry created by coalesing multiple {@link Registry} instances
+ */
+export class CoalescedRegistry<
+    R extends readonly AbstractRegistry<
+        Record<string, React.LazyExoticComponent<React.ComponentType>>,
+        Record<string, unknown>
+    >[],
+> extends AbstractRegistry<
+    Record<
+        keyof UnionToIntersection<R[number]["components"]>,
+        React.LazyExoticComponent<React.ComponentType>
+    >,
+    Record<keyof UnionToIntersection<R[number]["exports"]>, unknown>
+> {
+    readonly components: Record<
+        keyof UnionToIntersection<R[number]["components"]>,
+        React.LazyExoticComponent<React.ComponentType>
+    >;
+    readonly exports: Record<
+        keyof UnionToIntersection<R[number]["exports"]>,
+        unknown
+    >;
 
-    public getExport<T extends object = object>(
-        key: RegistryKey<S, M, R>,
-    ): ExportSingleType<T> {
-        return this.exports[key] as ExportSingleType<T>;
-    }
-    public getExports<
-        T extends Record<RegistryKey<S, M, R>, object> = Record<
-            RegistryKey<S, M, R>,
-            object
-        >,
-    >(): ExportAllType<T> {
-        return this.exports as unknown as ExportAllType<T>;
+    constructor(...registries: R) {
+        super();
+
+        this.components = Object.assign(
+            {},
+            ...registries.map((r) => r.getComponents()),
+        );
+
+        this.exports = Object.assign(
+            {},
+            ...registries.map((r) => r.getExports()),
+        );
     }
 }
