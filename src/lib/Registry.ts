@@ -139,7 +139,7 @@ export function generateRegistries<
         }
 
         components.push([`${mountOn}${virtual}`, lazy(loader)]);
-        exports.push([`${mountOn}${virtual}`, import(src)]);
+        exports.push([`${mountOn}${virtual}`, loader()]);
     }
 
     return [Object.fromEntries(components), Object.fromEntries(exports)];
