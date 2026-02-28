@@ -20,7 +20,39 @@ import {
     TableRow,
 } from "./Table";
 
-export const Elements: MDXComponents = {
+export type MDXComponent = MDXComponents[number];
+
+export const BaseElementTags = [
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "a",
+    "em",
+    "del",
+    "strong",
+    "code",
+    "blockquote",
+    "pre",
+    "p",
+    "hr",
+    "ol",
+    "ul",
+    "li",
+    "img",
+    "table",
+    "thead",
+    "tbody",
+    "th",
+    "tr",
+    "td",
+] as const;
+export const BaseElements: Record<
+    (typeof BaseElementTags)[number],
+    MDXComponent
+> = {
     // Headings
     h1: (props) => Header({ ...props, level: 1 }),
     h2: (props) => Header({ ...props, level: 2 }),
@@ -51,6 +83,5 @@ export const Elements: MDXComponents = {
     th: TableHeadCell,
     tr: TableRow,
     td: TableData,
-};
-
-export default Elements;
+} as const satisfies MDXComponents;
+export default BaseElements;

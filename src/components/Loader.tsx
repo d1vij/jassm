@@ -1,11 +1,11 @@
 import type { MDXComponents, MDXProps } from "mdx/types";
 import { Suspense } from "react";
 import { type StyleClassesMap, StyleContext } from "@/lib";
-import { Elements } from "./Elements";
+import { BaseElements } from "./Elements";
 import type { JSX } from "./Elements/types";
 
 export type MDXFromComponentProps = {
-    SourceComponent: React.ComponentType<MDXProps>;
+    source: React.ComponentType<MDXProps>;
     styles: StyleClassesMap;
     elements?: MDXComponents;
     fallback?: React.ReactNode;
@@ -15,10 +15,10 @@ export type MDXFromComponentProps = {
  * Simple way to directly load a component from the Registry
  */
 export function MDXFromComponent({
-    SourceComponent,
+    source: SourceComponent,
     styles,
     fallback,
-    elements = Elements,
+    elements = BaseElements,
 }: MDXFromComponentProps): JSX {
     return (
         <StyleContext value={styles}>

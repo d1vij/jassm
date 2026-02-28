@@ -16,7 +16,6 @@ export type MDXFile = `${string}.mdx`;
  */
 type ImportedModule = () => Promise<{ default: React.ComponentType }>;
 
-// Expands the object type so that its visible on hover
 type MustStartWithSlash<T extends string> = T extends `/${string}` ? T : never;
 type MustNotEndWithSlash<T extends string> = T extends `${string}/` ? never : T;
 
@@ -175,6 +174,7 @@ abstract class AbstractRegistry<
     ): ExportSingleType<T> {
         return this.exports[key] as ExportSingleType<T>;
     }
+
     public getExports<
         T extends Record<keyof C, object> = Record<keyof C, object>,
     >(): ExportAllType<T> {

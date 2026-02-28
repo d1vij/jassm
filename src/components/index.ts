@@ -1,2 +1,2 @@
-export { Elements, type HeaderLevels } from "./Elements";
+export * from "./Elements";
 export { MDXFromComponent, type MDXFromComponentProps } from "./Loader";
