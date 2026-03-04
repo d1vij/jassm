@@ -3,7 +3,7 @@ import {
     type StateSetterFunction,
     useClipboardText,
 } from "@d1vij/shit-i-always-use";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useStyles } from "@/lib/StyleContext";
 import type { ElementProps, JSX } from "./types";
 
@@ -129,11 +129,12 @@ function getTableJsonAsMarkdown(json: TableAsJson): string {
 export function Table(props: ElementProps<"table">): JSX {
     const styles = useStyles();
     const ref = useRef<HTMLTableElement>(null);
+    const detailsRef = useRef<HTMLDetailsElement>(null);
     const [open, setOpen] = useState(false);
     const { copy } = useClipboardText();
 
     useEffect(() => {
-        const elm = ref.current;
+        const elm = detailsRef.current;
         if (!elm) return;
 
         function handleMouseLeave() {
@@ -189,6 +190,7 @@ export function Table(props: ElementProps<"table">): JSX {
                 {props.children}
             </table>
             <details
+                ref={detailsRef}
                 className={cn(styles.table_action_buttons_details)}
                 open={open}
             >
