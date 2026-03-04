@@ -1,2 +1,2 @@
 export * from "./Elements";
-export type { HeaderLevels } from "./types";
+export type { ElementProps, HeaderLevels } from "./types";

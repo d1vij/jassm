@@ -35,23 +35,36 @@ export const StyleClassesList = [
     "table_body",
     "table_row",
     "table_data",
+    "table_container",
+    "table_action_buttons_details",
+    "table_action_buttons_summary",
+    "table_action_button",
+    "table_action_button_html",
+    "table_action_button_csv",
+    "table_action_button_json",
+    "table_action_button_markdown",
 ] as const;
 
 export type StyleClasses = (typeof StyleClassesList)[number];
-export type StyleClassesMap = Partial<{
+export type StyleClassesMap = {
     [K in StyleClasses]: string;
-}>;
+};
 
 /**
  * Context which defines styles for the loaded component(s)
  */
-export const StyleContext: React.Context<StyleClassesMap> =
-    createContext<StyleClassesMap>({});
+export const StyleContext: React.Context<StyleClassesMap | null> =
+    createContext<StyleClassesMap | null>(null);
 
 /**
  *  Hook to get defined style classes map
  * @returns {@link StyleClassesMap}
  */
 export function useStyles(): StyleClassesMap {
-    return useContext(StyleContext);
+    const ctx = useContext(StyleContext);
+    if (ctx === null)
+        throw new Error(
+            "No stylesmap found at any parent level. Either you forgot to pass the stylesmap to component loader or didnt wrap your component in StyleContext",
+        );
+    return ctx;
 }
