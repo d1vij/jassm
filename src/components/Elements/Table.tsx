@@ -1,17 +1,32 @@
-import { cn, useClipboardText } from "@d1vij/shit-i-always-use";
-import { useRef } from "react";
+import {
+    cn,
+    type StateSetterFunction,
+    useClipboardText,
+} from "@d1vij/shit-i-always-use";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStyles } from "@/lib/StyleContext";
 import type { ElementProps, JSX } from "./types";
 
 type TableActionButtonProps = {
     label: string;
     onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+    setOpen: StateSetterFunction<boolean>;
 };
-function TableActionButton({ label, onClick }: TableActionButtonProps) {
+function TableActionButton({
+    label,
+    onClick,
+    setOpen,
+}: TableActionButtonProps) {
     const styles = useStyles();
+
+    function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+        setOpen(false);
+        onClick(e);
+    }
+
     return (
         <button
-            onClick={onClick}
+            onClick={handleClick}
             className={cn(styles.table_action_button)}
             type="button"
         >
@@ -114,49 +129,89 @@ function getTableJsonAsMarkdown(json: TableAsJson): string {
 export function Table(props: ElementProps<"table">): JSX {
     const styles = useStyles();
     const ref = useRef<HTMLTableElement>(null);
+    const [open, setOpen] = useState(false);
     const { copy } = useClipboardText();
 
-    function copyAs(_as: "html" | "csv" | "json" | "markdown") {
-        return async () => {
-            const elm = ref.current;
-            if (!elm) return;
-            const json = getTableAsJson(elm);
-            let extractedText: string;
-            switch (_as) {
-                case "html":
-                    extractedText = getTableJsonAsHtml(json);
-                    break;
-                case "csv":
-                    extractedText = getTableJsonAsCsv(json);
-                    break;
-                case "markdown":
-                    extractedText = getTableJsonAsMarkdown(json);
-                    break;
-                case "json":
-                    extractedText = JSON.stringify(json, null, 4);
-                    break;
-                default:
-                    _as as never;
-                    return;
-            }
+    useEffect(() => {
+        const elm = ref.current;
+        if (!elm) return;
 
-            await copy(extractedText);
+        function handleMouseLeave() {
+            setOpen(false);
+        }
+        function handleMouseEnter() {
+            setOpen(true);
+        }
+
+        elm.addEventListener("mouseenter", handleMouseEnter);
+        elm.addEventListener("mouseleave", handleMouseLeave);
+
+        return () => {
+            elm.removeEventListener("mouseenter", handleMouseEnter);
+            elm.removeEventListener("mouseleave", handleMouseLeave);
         };
-    }
+    }, []);
+
+    const copyAs = useCallback(
+        (format: "html" | "csv" | "json" | "markdown") => {
+            return async () => {
+                const elm = ref.current;
+                if (!elm) return;
+                const json = getTableAsJson(elm);
+                let extractedText: string;
+                switch (format) {
+                    case "html":
+                        extractedText = getTableJsonAsHtml(json);
+                        break;
+                    case "csv":
+                        extractedText = getTableJsonAsCsv(json);
+                        break;
+                    case "markdown":
+                        extractedText = getTableJsonAsMarkdown(json);
+                        break;
+                    case "json":
+                        extractedText = JSON.stringify(json, null, 4);
+                        break;
+                    default:
+                        format as never;
+                        return;
+                }
+
+                await copy(extractedText);
+            };
+        },
+        [copy],
+    );
 
     return (
         <div className={cn(styles.table_container)}>
             <table ref={ref} className={cn(styles.table)}>
                 {props.children}
             </table>
-            <details className={cn(styles.table_action_buttons_details)}>
+            <details
+                className={cn(styles.table_action_buttons_details)}
+                open={open}
+            >
                 <summary className={cn(styles.table_action_buttons_summary)}>
                     Copy
                 </summary>
-                <TableActionButton label="HTML" onClick={copyAs("html")} />
-                <TableActionButton label="CSV" onClick={copyAs("csv")} />
-                <TableActionButton label="Json" onClick={copyAs("json")} />
                 <TableActionButton
+                    setOpen={setOpen}
+                    label="HTML"
+                    onClick={copyAs("html")}
+                />
+                <TableActionButton
+                    setOpen={setOpen}
+                    label="CSV"
+                    onClick={copyAs("csv")}
+                />
+                <TableActionButton
+                    setOpen={setOpen}
+                    label="Json"
+                    onClick={copyAs("json")}
+                />
+                <TableActionButton
+                    setOpen={setOpen}
                     label="Markdown"
                     onClick={copyAs("markdown")}
                 />
