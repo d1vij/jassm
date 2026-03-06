@@ -1,6 +1,6 @@
 {
     "name": "@d1vij/jassm",
-    "version": "0.1.17",
+    "version": "0.1.18-beta.1",
     "description": "Just another static site maker. Create simple content driven sites using MDX and React along with Typescript safety.",
     "homepage": "https://github.com/d1vij/jassm",
     "license": "MIT",
