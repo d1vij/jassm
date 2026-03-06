@@ -1,19 +1,10 @@
-/**
- * Type aware MDX registry built around `import.meta.glob`.
- *
- * Features:
- * - Derives route keys from file paths at compile time
- * - Lazy-loads MDX React components for use inside `React.Suspense`
- * - Provides strongly typed access to:
- *   - Components
- *   - Module exports
- *   - Metadata extracted from each MDX file
- *
- * Guarantees:
- * - Compile-time safety for route keys
- * - Dev-time validation of glob results
- */
 /** biome-ignore-all lint/suspicious/noExplicitAny: Trust me bro*/
+
+// TODO: Add path typings to get methods
+// TODO: Update readme
+/**
+ * Type aware MDX registry built around import.meta.glob.
+ */
 
 import { lazy } from "react";
 
@@ -53,41 +44,32 @@ type ImportedModule = () => Promise<{ default: React.ComponentType }>;
 /**
  * Removes `.mdx` extension from a path
  */
-type StripExtension<T extends string> = T extends `${infer P}.mdx` ? P : T;
+type StripExtension<T extends string> = T extends `${infer Rest}.mdx`
+    ? Rest
+    : T;
 
 /**
- * Replace filesystem root with a virtual route prefix
+ * Derives the route keys produced by the registry and
+ * replace filesystem root with a virtual route prefix
  *
  * Example:
  *
  * `/src/content/foo.mdx`
  * root = `/src/content`
  * virtual = `/blog`
- *
  * Result:
  * `/blog/foo`
- */
-type ReplaceRoot<
-    P extends string,
-    Root extends string,
-    Virtual extends string,
-> = P extends `${Root}${infer Rest}`
-    ? `${Virtual}${StripExtension<Rest>}`
-    : never;
-
-/**
- * Derives the route keys produced by the registry
- *
- * Example:
- *
- * `/src/blog/foo.mdx`
- * → `/blog/foo`
  */
 type RouteKey<
     Modules extends Record<string, unknown>,
     Root extends string,
     Virtual extends string,
-> = ReplaceRoot<Extract<keyof Modules, string>, Root, Virtual>;
+> = keyof {
+    [K in keyof Modules as K extends `${string}${Root}/${infer Rest}.mdx`
+        ? `${Virtual}/${Rest}`
+        : never]: true;
+} &
+    string;
 
 /**
  * Options passed to {@link generateRegistry}
@@ -118,7 +100,11 @@ export type RegistryOptions<
     /**
      * Metadata extracted from each MDX file
      */
-    metadataGlob: { [K in keyof Modules]: MetaType };
+
+    // TODO: Add checks to ensure metadataGlob is eagerly loaded module
+    metadataGlob: {
+        [K in keyof Modules as `${StripExtension<Extract<K, string>>}.meta.ts`]: MetaType;
+    };
 
     /**
      * Filesystem root path
@@ -142,7 +128,7 @@ export type RegistryOptions<
  */
 export function generateRegistry<
     MetaType,
-    Modules extends GlobResult<WrappedUnknownPromise>,
+    Modules extends Record<string, WrappedUnknownPromise>,
     Root extends string,
     Virtual extends string,
 >({
@@ -179,7 +165,7 @@ export function generateRegistry<
 } {
     const paths = Object.keys(modulesGlob) as Extract<keyof Modules, string>[];
 
-    const keys = new Array(paths.length);
+    const keys = [] as RouteKey<Modules, Root, Virtual>[];
 
     const _components: [
         string,
@@ -190,21 +176,31 @@ export function generateRegistry<
 
     const _metadata: [string, MetaType][] = [];
 
-    for (const [idx, path] of paths.entries()) {
+    console.log(metadataGlob);
+    for (const path of paths) {
         /**
          * Transform filesystem path into virtual route key
+         * 1. Replace the root to virtual path
+         *    - For path /src/assets/subjects/chemistry with root as /src/assets/subjects and
+         *      virtual path /subjects the route becomes /subjects/chemistry
          */
         const route = path
             .replace(root, virtual)
+            // strip out extension to get just the path
             .replace(".mdx", "") as RouteKey<Modules, Root, Virtual>;
 
         const loader = modulesGlob[path] as ImportedModule;
 
-        keys[idx] = route as (typeof keys)[number];
+        keys.push(route);
 
         _components.push([route, lazy(loader)]);
         _exports.push([route, loader()]);
-        _metadata.push([route, metadataGlob[path]]);
+        const metaLoader = metadataGlob[
+            path.replace(".mdx", ".meta.ts") as keyof typeof metadataGlob
+        ] as MetaType;
+        console.log(typeof metaLoader);
+
+        _metadata.push([route, metaLoader]);
     }
 
     type Return = ReturnType<
@@ -230,18 +226,19 @@ export function generateRegistry<
  * - metadata
  */
 abstract class AbstractRegistry<
-    Keys extends string,
+    Key extends string,
     Components extends Record<
-        Keys,
+        Key,
         React.LazyExoticComponent<React.ComponentType>
     >,
-    Exports extends Record<Keys, unknown>,
-    Metadata extends Record<Keys, unknown>,
+    Exports extends Record<Key, unknown>,
+    Metadata extends Record<Key, unknown>,
 > {
     /**
      * List of registry keys
      */
-    abstract readonly keys: readonly Keys[];
+    // BUG: Somehow Key is collapsing to type never
+    abstract readonly keys: readonly Key[];
 
     /**
      * Lazy component registry
@@ -258,25 +255,44 @@ abstract class AbstractRegistry<
      */
     abstract readonly metadata: Metadata;
 
+    // NOTE: Until i figure out why the Key generic is resolving to never
+    // all get methods will accpet any string and would throw error incase
+    // the value is not found in any map
+
+    private get<R extends Components | Exports | Metadata, K extends keyof R>(
+        _from: R,
+        key: K,
+    ) {
+        const value = _from[key];
+        if (!value) {
+            // TODO: CHANGE
+            throw new Error(
+                `Invalid key passed ${key.toString()} to access whatever the fuck we were extractign`,
+            );
+        }
+
+        return value;
+    }
+
     /**
      * Retrieve a React component by route key
      */
-    public getComponent<Key extends Keys>(key: Key): Components[Key] {
-        return this.components[key];
+    public getComponent(key: string): Components[keyof Components] {
+        return this.get(this.components, key as keyof Components);
     }
 
     /**
      * Retrieve raw module exports for a route
      */
-    public getExport<Key extends Keys>(key: Key): Exports[Key] {
-        return this.exports[key];
+    public getExport(key: string): Exports[keyof Exports] {
+        return this.get(this.exports, key as keyof Exports);
     }
 
     /**
      * Retrieve metadata for a route
      */
-    public getMetadata<Key extends Keys>(key: Key): Metadata[Key] {
-        return this.metadata[key];
+    public getMetadata(key: string): Metadata[keyof Metadata] {
+        return this.get(this.metadata, key as keyof Metadata);
     }
 }
 
@@ -288,7 +304,7 @@ abstract class AbstractRegistry<
  */
 export class Registry<
     MetaType,
-    Modules extends GlobResult<WrappedUnknownPromise>,
+    Modules extends Record<`${Root}/${string}.mdx`, WrappedUnknownPromise>,
     Root extends string,
     Virtual extends string,
 > extends AbstractRegistry<

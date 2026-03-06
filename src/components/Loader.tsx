@@ -6,7 +6,7 @@ import type { JSX } from "./Elements/types";
 
 export type MDXFromComponentProps = {
     source: React.ComponentType<MDXProps>;
-    styles: StyleClassesMap;
+    styles: Partial<StyleClassesMap>;
     elements?: MDXComponents;
     fallback?: React.ReactNode;
 };

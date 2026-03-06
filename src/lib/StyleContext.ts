@@ -46,9 +46,9 @@ export const StyleClassesList = [
 ] as const;
 
 export type StyleClasses = (typeof StyleClassesList)[number];
-export type StyleClassesMap = {
+export type StyleClassesMap = Partial<{
     [K in StyleClasses]: string;
-};
+}>;
 
 /**
  * Context which defines styles for the loaded component(s)
