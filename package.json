@@ -1,11 +1,17 @@
 {
     "name": "@d1vij/jassm",
-    "description": "Just another static site maker. Create simple content driven sites using MDX and React along with Typescript safety.",
     "version": "0.1.17",
-    "type": "module",
+    "description": "Just another static site maker. Create simple content driven sites using MDX and React along with Typescript safety.",
+    "homepage": "https://github.com/d1vij/jassm",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/d1vij/jassm.git"
+    },
     "files": [
         "dist"
     ],
+    "type": "module",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -16,17 +22,11 @@
             }
         },
         "./plugin": {
-            "import": "./dist/vitePlugin.js",
-            "types": "./dist/vitePlugin.d.ts"
+            "types": "./dist/vitePlugin.d.ts",
+            "import": "./dist/vitePlugin.js"
         },
         "./package.json": "./package.json"
     },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/d1vij/jassm.git"
-    },
-    "homepage": "https://github.com/d1vij/jassm",
-    "license": "MIT",
     "publishConfig": {
         "access": "public"
     },
@@ -41,8 +41,11 @@
         "lint": "biome check --fix --unsafe && tsc -b",
         "format": "biome format --write"
     },
+    "dependencies": {
+        "@d1vij/shit-i-always-use": "^0.1.3"
+    },
     "devDependencies": {
-        "@biomejs/biome": "^2.4.4",
+        "@biomejs/biome": "^2.4.6",
         "@types/bun": "^1.3.9",
         "@types/mdx": "^2.0.13",
         "@types/react": "^19.2.14",
@@ -64,9 +67,6 @@
         "typescript": {
             "optional": true
         }
-    },
-    "dependencies": {
-        "@d1vij/shit-i-always-use": "^0.1.3"
     },
     "simple-git-hooks": {
         "pre-commit": "bun run lint && bun run type-check"

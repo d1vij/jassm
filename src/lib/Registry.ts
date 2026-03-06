@@ -1,251 +1,381 @@
 /**
- * Type aware MDX File and Exports registry
- * All components can be directly imported and loaded in React.Suspense without the Promise shenanigans
- * Has 'dev time' as well as compile time safety
+ * Type aware MDX registry built around `import.meta.glob`.
+ *
+ * Features:
+ * - Derives route keys from file paths at compile time
+ * - Lazy-loads MDX React components for use inside `React.Suspense`
+ * - Provides strongly typed access to:
+ *   - Components
+ *   - Module exports
+ *   - Metadata extracted from each MDX file
+ *
+ * Guarantees:
+ * - Compile-time safety for route keys
+ * - Dev-time validation of glob results
  */
+/** biome-ignore-all lint/suspicious/noExplicitAny: Trust me bro*/
 
 import { lazy } from "react";
 
 /**
- * File extension(s) to accept
+ * Utility type that ensures a string starts with `/`
  */
-export type MDXFile = `${string}.mdx`;
+type MustStartWithSlash<T extends string> = T extends `/${string}` ? T : never;
 
 /**
- *  Type of value returned in the object of `import.meta.glob`
+ * Utility type that ensures a string does NOT end with `/`
  */
-type ImportedModule = () => Promise<{ default: React.ComponentType }>;
-
-type MustStartWithSlash<T extends string> = T extends `/${string}` ? T : never;
 type MustNotEndWithSlash<T extends string> = T extends `${string}/` ? never : T;
 
 /**
- * Options passed to {@link generateRegistries}
+ * Valid path that:
+ * - starts with `/`
+ * - does not end with `/`
  */
-export type RegistryOptions<
-    /**
-     * Source
-     */
-    S extends string,
-    /**
-     * Mount on
-     */
-    M extends string,
-    /**
-     * Record
-     */
-    R extends Record<string, string>,
-> = {
-    /**
-     * Module object returned from `import.meta.glob`
-     * @example import.module.glob("/src/assets/mdx/**\/*.mdx")
-     */
-    modules: Record<string, () => Promise<unknown>>;
-    /**
-     *  Directory from which to resolve the source paths in {@link RegistryOptions.records}
-     */
-    source: MustNotEndWithSlash<S> & MustStartWithSlash<S>;
-    /**
-     * Virtual base path on which to mount the key of {@link RegistryOptions.records}
-     */
-    mountOn: MustNotEndWithSlash<M> & MustStartWithSlash<M>;
-    /**
-     * Mappings of virtual path to file paths under {@link RegistryOptions.source}
-     */
-    records: {
-        // if key is a string
-        [K in keyof R]: K extends string
-            ? // it shouldnt end with slash and should start with slash
-              MustNotEndWithSlash<K> & MustStartWithSlash<K> extends never
-                ? // if the above condition is false, it shouldnt exist
-                  never
-                : // if key is valid, check if value is valid
-                  R[K] extends MustStartWithSlash<R[K]> & MDXFile
-                  ? R[K]
-                  : // if it isint, it shouldnt exist
-                    never
-            : // if the key is not a stirng, it shouldnt exist
-              never;
-    };
-};
-
-export type RegistryKey<
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
-> = keyof RegistryOf<unknown, S, M, R>;
+type PathCheck<T extends string> = MustStartWithSlash<T> &
+    MustNotEndWithSlash<T>;
 
 /**
- * Constructor for any generic registry with keys in the format of `mount-path/virtual-path` for each virual path passed in {@link RegistryOptions.records}
+ * Type returned by `import.meta.glob`
  */
-export type RegistryOf<
-    T,
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
-> = {
-    [K in keyof RegistryOptions<
-        S,
-        M,
-        R
-    >["records"] as `${RegistryOptions<S, M, R>["mountOn"]}${Extract<K, string>}`]: T;
-};
+type WrappedUnknownPromise = () => Promise<unknown>;
 
 /**
- * Registry of react components
+ * Shape of glob result
  */
-export type ComponentRegistry<
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
-> = RegistryOf<React.LazyExoticComponent<React.ComponentType>, S, M, R>;
+type GlobResult<T> = Record<string, T>;
 
 /**
- * Registry of promise objects equivalent to return type of `import(<path>)`
+ * Expected module shape of an MDX file
  */
-export type ExportsRegistry<
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
-> = RegistryOf<Promise<Record<string, unknown>>, S, M, R>;
+type ImportedModule = () => Promise<{ default: React.ComponentType }>;
 
 /**
- * Function to generate Registry mappings, use {@link Registry} class instead of this.
- * @param MDXRegistryOptions
- * @returns Tuple of [{@link ComponentRegistry}, {@link ExportsRegistry}]
+ * Removes `.mdx` extension from a path
  */
-export function generateRegistries<
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
->({
-    modules,
-    source,
-    mountOn,
-    records,
-}: RegistryOptions<S, M, R>): [
-    ComponentRegistry<S, M, R>,
-    ExportsRegistry<S, M, R>,
-] {
-    const components = [];
-    const exports = [];
-
-    for (const [virtual, path] of Object.entries(records)) {
-        const src = `${source}${path}`;
-        const loader = modules[src] as ImportedModule;
-        if (!loader) {
-            throw new Error(`No such file exsits as ${src}`);
-        }
-
-        components.push([`${mountOn}${virtual}`, lazy(loader)]);
-        exports.push([`${mountOn}${virtual}`, loader()]);
-    }
-
-    return [Object.fromEntries(components), Object.fromEntries(exports)];
-}
+type StripExtension<T extends string> = T extends `${infer P}.mdx` ? P : T;
 
 /**
- * The returned export object has the type of {@link React.ComponentType} + whatever user passes
+ * Replace filesystem root with a virtual route prefix
+ *
+ * Example:
+ *
+ * `/src/content/foo.mdx`
+ * root = `/src/content`
+ * virtual = `/blog`
+ *
+ * Result:
+ * `/blog/foo`
  */
-export type ExportSingleType<T> = Promise<T & { default: React.ComponentType }>;
-export type ExportAllType<T> = {
-    [K in keyof T]: ExportSingleType<T[K]>;
-};
-
-abstract class AbstractRegistry<
-    C extends Record<string, React.LazyExoticComponent<React.ComponentType>>,
-    E extends Record<string, unknown>,
-> {
-    abstract components: C;
-    abstract exports: E;
-
-    public getComponent<K extends keyof C>(key: K): C[K] {
-        // this shouldnt be undefined since build time safety
-        // from invalid paths is provided by vite
-        return this.components[key];
-    }
-
-    public getComponents(): C {
-        return this.components;
-    }
-
-    public getExport<T extends object, K extends keyof E>(
-        key: K,
-    ): ExportSingleType<T> {
-        return this.exports[key] as ExportSingleType<T>;
-    }
-
-    public getExports<
-        T extends Record<keyof C, object> = Record<keyof C, object>,
-    >(): ExportAllType<T> {
-        return this.exports as unknown as ExportAllType<T>;
-    }
-}
-
-/**
- * Wrapper class over {@link generateRegistries}. Provides methods to access components and exports from typesafe keys
- */
-export class Registry<
-    S extends string,
-    M extends string,
-    R extends Record<string, string>,
-> extends AbstractRegistry<
-    ComponentRegistry<S, M, R>,
-    ExportsRegistry<S, M, R>
-> {
-    readonly components: ComponentRegistry<S, M, R>;
-    readonly exports: ExportsRegistry<S, M, R>;
-    constructor(registryOpts: RegistryOptions<S, M, R>) {
-        super();
-        [this.components, this.exports] = generateRegistries<S, M, R>(
-            registryOpts,
-        );
-    }
-}
-
-type UnionToIntersection<U> = (
-    U extends unknown
-        ? (k: U) => void
-        : never
-) extends (k: infer I) => void
-    ? I
+type ReplaceRoot<
+    P extends string,
+    Root extends string,
+    Virtual extends string,
+> = P extends `${Root}${infer Rest}`
+    ? `${Virtual}${StripExtension<Rest>}`
     : never;
 
 /**
- * Registry created by coalesing multiple {@link Registry} instances
+ * Derives the route keys produced by the registry
+ *
+ * Example:
+ *
+ * `/src/blog/foo.mdx`
+ * → `/blog/foo`
  */
-export class CoalescedRegistry<
-    R extends readonly AbstractRegistry<
-        Record<string, React.LazyExoticComponent<React.ComponentType>>,
-        Record<string, unknown>
-    >[],
-> extends AbstractRegistry<
-    Record<
-        keyof UnionToIntersection<R[number]["components"]>,
+type RouteKey<
+    Modules extends Record<string, unknown>,
+    Root extends string,
+    Virtual extends string,
+> = ReplaceRoot<Extract<keyof Modules, string>, Root, Virtual>;
+
+/**
+ * Options passed to {@link generateRegistry}
+ */
+export type RegistryOptions<
+    /**
+     * Metadata type extracted from MDX modules
+     */
+    MetaType,
+    /**
+     * Result of `import.meta.glob`
+     */
+    Modules extends GlobResult<WrappedUnknownPromise>,
+    /**
+     * Filesystem root directory of MDX files
+     */
+    Root extends string,
+    /**
+     * Virtual route prefix where MDX routes should mount
+     */
+    Virtual extends string,
+> = {
+    /**
+     * Module map returned from `import.meta.glob`
+     */
+    modulesGlob: Modules;
+
+    /**
+     * Metadata extracted from each MDX file
+     */
+    metadataGlob: { [K in keyof Modules]: MetaType };
+
+    /**
+     * Filesystem root path
+     */
+    root: PathCheck<Root>;
+
+    /**
+     * Virtual route mount point
+     */
+    virtual: PathCheck<Virtual>;
+};
+
+/**
+ * Internal function used by {@link Registry}.
+ *
+ * Builds registry mappings for:
+ * - keys
+ * - metadata
+ * - components
+ * - exports
+ */
+export function generateRegistry<
+    MetaType,
+    Modules extends GlobResult<WrappedUnknownPromise>,
+    Root extends string,
+    Virtual extends string,
+>({
+    modulesGlob,
+    metadataGlob,
+    root,
+    virtual,
+}: RegistryOptions<MetaType, Modules, Root, Virtual>): {
+    /**
+     * List of route keys
+     */
+    keys: RouteKey<Modules, Root, Virtual>[];
+
+    /**
+     * Metadata registry
+     */
+    metadata: Record<RouteKey<Modules, Root, Virtual>, MetaType>;
+
+    /**
+     * React lazy component registry
+     */
+    components: Record<
+        RouteKey<Modules, Root, Virtual>,
+        React.LazyExoticComponent<React.ComponentType>
+    >;
+
+    /**
+     * Raw module export registry
+     */
+    exports: Record<
+        RouteKey<Modules, Root, Virtual>,
+        Promise<Record<string, unknown>>
+    >;
+} {
+    const paths = Object.keys(modulesGlob) as Extract<keyof Modules, string>[];
+
+    const keys = new Array(paths.length);
+
+    const _components: [
+        string,
+        React.LazyExoticComponent<React.ComponentType>,
+    ][] = [];
+
+    const _exports: [string, Promise<Record<string, unknown>>][] = [];
+
+    const _metadata: [string, MetaType][] = [];
+
+    for (const [idx, path] of paths.entries()) {
+        /**
+         * Transform filesystem path into virtual route key
+         */
+        const route = path
+            .replace(root, virtual)
+            .replace(".mdx", "") as RouteKey<Modules, Root, Virtual>;
+
+        const loader = modulesGlob[path] as ImportedModule;
+
+        keys[idx] = route as (typeof keys)[number];
+
+        _components.push([route, lazy(loader)]);
+        _exports.push([route, loader()]);
+        _metadata.push([route, metadataGlob[path]]);
+    }
+
+    type Return = ReturnType<
+        typeof generateRegistry<MetaType, Modules, Root, Virtual>
+    >;
+
+    return {
+        keys,
+        components: Object.fromEntries(_components) as Return["components"],
+
+        exports: Object.fromEntries(_exports) as Return["exports"],
+
+        metadata: Object.fromEntries(_metadata) as Return["metadata"],
+    };
+}
+
+/**
+ * Base class for all registry implementations.
+ *
+ * Provides type-safe access to:
+ * - components
+ * - module exports
+ * - metadata
+ */
+abstract class AbstractRegistry<
+    Keys extends string,
+    Components extends Record<
+        Keys,
         React.LazyExoticComponent<React.ComponentType>
     >,
-    Record<keyof UnionToIntersection<R[number]["exports"]>, unknown>
+    Exports extends Record<Keys, unknown>,
+    Metadata extends Record<Keys, unknown>,
 > {
+    /**
+     * List of registry keys
+     */
+    abstract readonly keys: readonly Keys[];
+
+    /**
+     * Lazy component registry
+     */
+    abstract readonly components: Components;
+
+    /**
+     * Raw module export registry
+     */
+    abstract readonly exports: Exports;
+
+    /**
+     * Metadata registry
+     */
+    abstract readonly metadata: Metadata;
+
+    /**
+     * Retrieve a React component by route key
+     */
+    public getComponent<Key extends Keys>(key: Key): Components[Key] {
+        return this.components[key];
+    }
+
+    /**
+     * Retrieve raw module exports for a route
+     */
+    public getExport<Key extends Keys>(key: Key): Exports[Key] {
+        return this.exports[key];
+    }
+
+    /**
+     * Retrieve metadata for a route
+     */
+    public getMetadata<Key extends Keys>(key: Key): Metadata[Key] {
+        return this.metadata[key];
+    }
+}
+
+/**
+ * Primary registry implementation.
+ *
+ * Wraps {@link generateRegistry} and exposes
+ * strongly typed access methods.
+ */
+export class Registry<
+    MetaType,
+    Modules extends GlobResult<WrappedUnknownPromise>,
+    Root extends string,
+    Virtual extends string,
+> extends AbstractRegistry<
+    RouteKey<Modules, Root, Virtual>,
+    Record<
+        RouteKey<Modules, Root, Virtual>,
+        React.LazyExoticComponent<React.ComponentType>
+    >,
+    Record<RouteKey<Modules, Root, Virtual>, unknown>,
+    Record<RouteKey<Modules, Root, Virtual>, MetaType>
+> {
+    readonly keys: RouteKey<Modules, Root, Virtual>[];
+
     readonly components: Record<
-        keyof UnionToIntersection<R[number]["components"]>,
+        RouteKey<Modules, Root, Virtual>,
         React.LazyExoticComponent<React.ComponentType>
     >;
-    readonly exports: Record<
-        keyof UnionToIntersection<R[number]["exports"]>,
-        unknown
-    >;
 
-    constructor(...registries: R) {
+    readonly exports: Record<RouteKey<Modules, Root, Virtual>, unknown>;
+
+    readonly metadata: Record<RouteKey<Modules, Root, Virtual>, MetaType>;
+
+    constructor(opts: RegistryOptions<MetaType, Modules, Root, Virtual>) {
         super();
 
-        this.components = Object.assign(
-            {},
-            ...registries.map((r) => r.getComponents()),
-        );
+        const result = generateRegistry(opts);
 
-        this.exports = Object.assign(
-            {},
-            ...registries.map((r) => r.getExports()),
-        );
+        this.keys = result.keys;
+        this.components = result.components;
+        this.exports = result.exports;
+        this.metadata = result.metadata;
+    }
+}
+
+/**
+ * Utility types used for extracting generics
+ * from registry instances.
+ */
+
+type RegistryKeys<R> =
+    R extends AbstractRegistry<infer K, any, any, any> ? K : never;
+
+type RegistryComponents<R> =
+    R extends AbstractRegistry<any, infer C, any, any> ? C : never;
+
+type RegistryExports<R> =
+    R extends AbstractRegistry<any, any, infer E, any> ? E : never;
+
+type RegistryMetadata<R> =
+    R extends AbstractRegistry<any, any, any, infer M> ? M : never;
+
+/**
+ * Registry created by merging multiple {@link Registry}
+ * instances into a single unified registry.
+ *
+ * Useful for combining multiple MDX content directories
+ * into one route registry.
+ */
+export class CoalescedRegistry<
+    Registries extends AbstractRegistry<any, any, any, any>[],
+> extends AbstractRegistry<
+    RegistryKeys<Registries[number]>,
+    RegistryComponents<Registries[number]>,
+    RegistryExports<Registries[number]>,
+    RegistryMetadata<Registries[number]>
+> {
+    readonly keys: RegistryKeys<Registries[number]>[] = [];
+
+    readonly components = {} as RegistryComponents<Registries[number]>;
+
+    readonly exports = {} as RegistryExports<Registries[number]>;
+
+    readonly metadata = {} as RegistryMetadata<Registries[number]>;
+
+    constructor(...registries: Registries) {
+        super();
+
+        for (const registry of registries) {
+            this.keys.push(
+                ...(registry.keys as RegistryKeys<Registries[number]>[]),
+            );
+
+            Object.assign(this.components, registry.components);
+
+            Object.assign(this.exports, registry.exports);
+
+            Object.assign(this.metadata, registry.metadata);
+        }
     }
 }

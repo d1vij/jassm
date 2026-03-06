@@ -33,10 +33,10 @@ import react from "@vitejs/plugin-react";
 import jassm from "@d1vij/jassm/plugin";
 
 export default defineConfig({
-    plugins: [
-        jassm(), // Put jassm plugin before react's plugin
-        react(),
-    ],
+  plugins: [
+    jassm(), // Put jassm plugin before react's plugin
+    react(),
+  ],
 });
 ```
 
@@ -56,12 +56,12 @@ echo "# This is a Heading" > sample.mdx
 import { Registry } from "@d1vij/jassm";
 
 export const registry = new Registry({
-    modules: import.meta.glob("/src/assets/mdx/**/*.mdx"),
-    source: "/src/assets/mdx",
-    mountOn: "/root",
-    records: {
-        "/sample": "/example.mdx",
-    },
+  modules: import.meta.glob("/src/assets/mdx/**/*.mdx"),
+  source: "/src/assets/mdx",
+  mountOn: "/root",
+  records: {
+    "/sample": "/example.mdx",
+  },
 });
 ```
 
@@ -75,8 +75,8 @@ import type { StyleClassesMap } from "jassm";
 import "myStyles.css";
 
 export const stylesmap: StyleClassesMap = {
-    header: "myHeader",
-    paragraph: "pee",
+  header: "myHeader",
+  paragraph: "pee",
 };
 ```
 
@@ -88,8 +88,8 @@ import styles from "myStyles.module.css";
 import type { StyleClassesMap } from "jassm";
 
 export const stylesmap: StyleClassesMap = {
-    header: styles.myHeader,
-    paragraph: styles.pee,
+  header: styles.myHeader,
+  paragraph: styles.pee,
 };
 ```
 
@@ -143,17 +143,18 @@ import { stylesmap } from "./stylesmap";
 import { Suspense } from "react";
 
 export default function MyLoader() {
-    const Component = registry["/root/sample"];
+  const Component = registry["/root/sample"];
 
-    return (
-        <div>
-            <StyleContext styles={stylesmap}>
-                <Suspense>
-                    <Component components={Elements} />
-                </Suspense>
-            </StyleContext>
-        </div>
-    );
+  return (
+    <div>
+      <StyleContext styles={stylesmap}>
+        <Suspense>
+          <Component components={Elements} />
+        </Suspense>
+      </StyleContext>
+    </div>
+  );
 }
 ```
+
 ---
