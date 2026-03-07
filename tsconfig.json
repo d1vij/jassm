@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "lib": ["ESNext", "DOM"],
+        "types": ["node"],
         "target": "ES2023",
         "module": "Preserve",
         "moduleDetection": "force",
@@ -30,6 +31,6 @@
         "noPropertyAccessFromIndexSignature": true
     },
 
-    "include": ["src/**/*", "src/types"],
+    "include": ["src/**/*", "src/types", "vite.config.ts"],
     "exclude": ["node_modules", "dist", "bunup.config.ts"]
 }

@@ -34,7 +34,6 @@
         "build": "bunup",
         "dev:ui": "cd test/ui && vite",
         "dev": "vite",
-        "build:vite": "vite build",
         "prepare": "bun simple-git-hooks",
         "type-check": "tsc --noEmit",
         "prepack": "bun run build",
@@ -49,12 +48,10 @@
         "@types/mdx": "^2.0.13",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
-        "@vitejs/plugin-react": "^5.1.4",
         "bumpp": "^10.4.1",
         "bunup": "^0.16.29",
         "simple-git-hooks": "^2.13.1",
-        "typescript": "^5.9.3",
-        "vite": "^7.3.1"
+        "typescript": "^5.9.3"
     },
     "peerDependencies": {
         "@mdx-js/rollup": "^3.1.1",

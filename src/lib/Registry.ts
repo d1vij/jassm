@@ -48,6 +48,10 @@ type StripExtension<T extends string> = T extends `${infer Rest}.mdx`
     ? Rest
     : T;
 
+type ResolveEmptyVirtual<Virtual extends string> = Virtual extends "/"
+    ? ""
+    : Virtual;
+
 /**
  * Derives the route keys produced by the registry and
  * replace filesystem root with a virtual route prefix
@@ -66,7 +70,7 @@ type RouteKey<
     Virtual extends string,
 > = keyof {
     [K in keyof Modules as K extends `${string}${Root}/${infer Rest}.mdx`
-        ? `${Virtual}/${Rest}`
+        ? `${ResolveEmptyVirtual<Virtual>}/${Rest}`
         : never]: true;
 } &
     string;
@@ -176,7 +180,6 @@ export function generateRegistry<
 
     const _metadata: [string, MetaType][] = [];
 
-    console.log(metadataGlob);
     for (const path of paths) {
         /**
          * Transform filesystem path into virtual route key
@@ -216,6 +219,14 @@ export function generateRegistry<
         metadata: Object.fromEntries(_metadata) as Return["metadata"],
     };
 }
+
+type Diffs = {
+    [K in
+        | `inComponentsButNotIn${"Exports" | "Metadata"}`
+        | `in${"Metadata" | "Exports"}ButNotInComponents`]:
+        | string[]
+        | undefined;
+};
 
 /**
  * Base class for all registry implementations.
@@ -258,6 +269,71 @@ abstract class AbstractRegistry<
     // NOTE: Until i figure out why the Key generic is resolving to never
     // all get methods will accpet any string and would throw error incase
     // the value is not found in any map
+
+    /**
+     * Compare keys of all registries in to check consistency.
+     * @returns `null` if all keys are consistent.
+     */
+    public diffKeys(): null | {
+        error: Error;
+        diffs: Diffs;
+    } {
+        // we dont care about the types of anything
+        // since we're just comparing value of strings
+        const keySet = new Set(this.keys);
+        const exportsSet = new Set(Object.keys(this.exports));
+        const metadataSet = new Set(Object.keys(this.metadata));
+
+        const exportsDiff = keySet.symmetricDifference(exportsSet);
+        const metadataDiff = keySet.symmetricDifference(metadataSet);
+
+        // we wont check against the components map cuz keys are extracted from the modules glob
+        const errMsg = [];
+        const diffs: Diffs = {
+            inComponentsButNotInExports: undefined,
+            inComponentsButNotInMetadata: undefined,
+            inExportsButNotInComponents: undefined,
+            inMetadataButNotInComponents: undefined,
+        };
+        if (exportsDiff.size !== 0) {
+            diffs.inComponentsButNotInExports = Array.from(
+                keySet.difference(exportsSet),
+            );
+            diffs.inExportsButNotInComponents = Array.from(
+                exportsSet.difference(keySet),
+            );
+            errMsg.push(
+                `Exports Registry and Component Registry have ${exportsDiff.size} key mismatches.
+                Keys which are present in Component map but not in Exports
+                \t${diffs.inComponentsButNotInExports.join("\n\t")}
+                and the keys present in Exports but not in component map are
+                \t${diffs.inExportsButNotInComponents.join("\n\t")}
+                `,
+            );
+        }
+        if (metadataDiff.size !== 0) {
+            diffs.inComponentsButNotInMetadata = Array.from(
+                keySet.difference(metadataSet),
+            );
+            diffs.inMetadataButNotInComponents = Array.from(
+                metadataDiff.difference(keySet),
+            );
+            errMsg.push(
+                `Metadata Registry and Component Registry have ${metadataDiff.size} key mismatches.
+                Keys which are present in Component map but not in Metadata
+                \t${diffs.inComponentsButNotInMetadata.join("\n\t")}
+                and the keys present in Metadata but not in Component map are
+                \t${diffs.inMetadataButNotInComponents.join("\n\t")}
+                `,
+            );
+        }
+
+        if (errMsg.length === 0) return null;
+        return {
+            diffs,
+            error: new Error(errMsg.join("\n\n")),
+        };
+    }
 
     private get<R extends Components | Exports | Metadata, K extends keyof R>(
         _from: R,
