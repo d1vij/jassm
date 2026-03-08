@@ -7,8 +7,9 @@ export default defineConfig({
     entry: ["src/index.ts", "src/vitePlugin.ts"],
     format: ["esm"],
     dts: true,
+    minify: true,
     clean: true,
-    splitting: false,
+    splitting: true,
     external: [
         "react",
         "react/jsx-runtime",

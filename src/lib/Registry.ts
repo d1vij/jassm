@@ -1,7 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Trust me bro*/
 
-// TODO: Add path typings to get methods
-// TODO: Update readme
 /**
  * Type aware MDX registry built around import.meta.glob.
  */
@@ -23,8 +21,9 @@ type MustNotEndWithSlash<T extends string> = T extends `${string}/` ? never : T;
  * - starts with `/`
  * - does not end with `/`
  */
-type PathCheck<T extends string> = MustStartWithSlash<T> &
-    MustNotEndWithSlash<T>;
+type PathCheck<T extends string> = T extends "" | "/"
+    ? T
+    : MustStartWithSlash<T> & MustNotEndWithSlash<T>;
 
 /**
  * Type returned by `import.meta.glob`
@@ -68,13 +67,13 @@ type RouteKey<
     Modules extends Record<string, unknown>,
     Root extends string,
     Virtual extends string,
-> = keyof {
-    [K in keyof Modules as K extends `${string}${Root}/${infer Rest}.mdx`
+> =
+    Extract<
+        keyof Modules,
+        `${Root}/${string}.mdx`
+    > extends `${Root}/${infer Rest}.mdx`
         ? `${ResolveEmptyVirtual<Virtual>}/${Rest}`
-        : never]: true;
-} &
-    string;
-
+        : never;
 /**
  * Options passed to {@link generateRegistry}
  */
@@ -180,6 +179,7 @@ export function generateRegistry<
 
     const _metadata: [string, MetaType][] = [];
 
+    const _virtual = virtual === "/" || virtual === "" ? "" : virtual;
     for (const path of paths) {
         /**
          * Transform filesystem path into virtual route key
@@ -188,7 +188,7 @@ export function generateRegistry<
          *      virtual path /subjects the route becomes /subjects/chemistry
          */
         const route = path
-            .replace(root, virtual)
+            .replace(root, _virtual)
             // strip out extension to get just the path
             .replace(".mdx", "") as RouteKey<Modules, Root, Virtual>;
 
@@ -266,10 +266,6 @@ abstract class AbstractRegistry<
      */
     abstract readonly metadata: Metadata;
 
-    // NOTE: Until i figure out why the Key generic is resolving to never
-    // all get methods will accpet any string and would throw error incase
-    // the value is not found in any map
-
     /**
      * Compare keys of all registries in to check consistency.
      * @returns `null` if all keys are consistent.
@@ -338,7 +334,7 @@ abstract class AbstractRegistry<
     private get<R extends Components | Exports | Metadata, K extends keyof R>(
         _from: R,
         key: K,
-    ) {
+    ): R[K] {
         const value = _from[key];
         if (!value) {
             // TODO: CHANGE
@@ -353,21 +349,21 @@ abstract class AbstractRegistry<
     /**
      * Retrieve a React component by route key
      */
-    public getComponent(key: string): Components[keyof Components] {
+    public getComponent(key: keyof Components): Components[keyof Components] {
         return this.get(this.components, key as keyof Components);
     }
 
     /**
      * Retrieve raw module exports for a route
      */
-    public getExport(key: string): Exports[keyof Exports] {
+    public getExport(key: keyof Exports): Exports[keyof Exports] {
         return this.get(this.exports, key as keyof Exports);
     }
 
     /**
      * Retrieve metadata for a route
      */
-    public getMetadata(key: string): Metadata[keyof Metadata] {
+    public getMetadata(key: keyof Metadata): Metadata[keyof Metadata] {
         return this.get(this.metadata, key as keyof Metadata);
     }
 }
@@ -380,7 +376,7 @@ abstract class AbstractRegistry<
  */
 export class Registry<
     MetaType,
-    Modules extends Record<`${Root}/${string}.mdx`, WrappedUnknownPromise>,
+    Modules extends Record<string, WrappedUnknownPromise>,
     Root extends string,
     Virtual extends string,
 > extends AbstractRegistry<
