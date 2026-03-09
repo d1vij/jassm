@@ -47,9 +47,9 @@ type StripExtension<T extends string> = T extends `${infer Rest}.mdx`
     ? Rest
     : T;
 
-type ResolveEmptyVirtual<Virtual extends string> = Virtual extends "/"
-    ? ""
-    : Virtual;
+type JoinVirtual<V extends string, P extends string> = V extends ""
+    ? P
+    : `${V}/${P}`;
 
 /**
  * Derives the route keys produced by the registry and
@@ -72,8 +72,9 @@ type RouteKey<
         keyof Modules,
         `${Root}/${string}.mdx`
     > extends `${Root}/${infer Rest}.mdx`
-        ? `${ResolveEmptyVirtual<Virtual>}/${Rest}`
+        ? JoinVirtual<Virtual, Rest>
         : never;
+
 /**
  * Options passed to {@link generateRegistry}
  */
@@ -117,7 +118,8 @@ export type RegistryOptions<
     /**
      * Virtual route mount point
      */
-    virtual: PathCheck<Virtual>;
+    // virtual: PathCheck<Virtual>;
+    virtual: Virtual;
 };
 
 /**
@@ -180,6 +182,7 @@ export function generateRegistry<
     const _metadata: [string, MetaType][] = [];
 
     const _virtual = virtual === "/" || virtual === "" ? "" : virtual;
+    console.log("virtual", _virtual);
     for (const path of paths) {
         /**
          * Transform filesystem path into virtual route key
@@ -188,9 +191,10 @@ export function generateRegistry<
          *      virtual path /subjects the route becomes /subjects/chemistry
          */
         const route = path
-            .replace(root, _virtual)
+            .replace(`${root}/`, _virtual)
             // strip out extension to get just the path
             .replace(".mdx", "") as RouteKey<Modules, Root, Virtual>;
+        console.log(route);
 
         const loader = modulesGlob[path] as ImportedModule;
 
