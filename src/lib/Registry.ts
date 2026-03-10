@@ -205,9 +205,8 @@ export function generateRegistry<
         const metaLoader = metadataGlob[
             path.replace(".mdx", ".meta.ts") as keyof typeof metadataGlob
         ] as MetaType;
-        console.log(typeof metaLoader);
 
-        _metadata.push([route, metaLoader]);
+        _metadata.push([route, { __splat: route, ...metaLoader }]);
     }
 
     type Return = ReturnType<
@@ -353,22 +352,26 @@ abstract class AbstractRegistry<
     /**
      * Retrieve a React component by route key
      */
-    public getComponent(key: keyof Components): Components[keyof Components] {
-        return this.get(this.components, key as keyof Components);
+    public getComponent(key: Key): Components[Key] {
+        return this.get(this.components, key);
     }
 
     /**
      * Retrieve raw module exports for a route
      */
-    public getExport(key: keyof Exports): Exports[keyof Exports] {
-        return this.get(this.exports, key as keyof Exports);
+    public getExport(key: Key): Exports[Key] {
+        return this.get(this.exports, key);
     }
 
     /**
      * Retrieve metadata for a route
      */
-    public getMetadata(key: keyof Metadata): Metadata[keyof Metadata] {
-        return this.get(this.metadata, key as keyof Metadata);
+    public getMetadata<T extends Record<string, unknown>>(
+        key: Key,
+    ): T & { __splat: Key } {
+        return this.get(this.metadata, key) as T & {
+            __splat: Key;
+        };
     }
 }
 
