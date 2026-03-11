@@ -18,7 +18,6 @@ export function Header(
 
     async function handleClick() {
         const url = new URL(`/#${id}`, window.location.origin).toString();
-        console.log("clicked");
         await copy(url);
     }
 

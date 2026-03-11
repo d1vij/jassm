@@ -182,7 +182,6 @@ export function generateRegistry<
     const _metadata: [string, MetaType][] = [];
 
     const _virtual = virtual === "/" || virtual === "" ? "" : virtual;
-    console.log("virtual", _virtual);
     for (const path of paths) {
         /**
          * Transform filesystem path into virtual route key
@@ -194,7 +193,6 @@ export function generateRegistry<
             .replace(`${root}/`, _virtual)
             // strip out extension to get just the path
             .replace(".mdx", "") as RouteKey<Modules, Root, Virtual>;
-        console.log(route);
 
         const loader = modulesGlob[path] as ImportedModule;
 
