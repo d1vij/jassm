@@ -165,7 +165,7 @@ export function generateRegistry<
      */
     exports: Record<
         RouteKey<Modules, Root, Virtual>,
-        Promise<Record<string, unknown>>
+        () => Promise<Record<string, unknown>>
     >;
 } {
     const paths = Object.keys(modulesGlob) as Extract<keyof Modules, string>[];
@@ -177,7 +177,7 @@ export function generateRegistry<
         React.LazyExoticComponent<React.ComponentType>,
     ][] = [];
 
-    const _exports: [string, Promise<Record<string, unknown>>][] = [];
+    const _exports: [string, () => Promise<Record<string, unknown>>][] = [];
 
     const _metadata: [string, MetaType][] = [];
 
@@ -197,9 +197,13 @@ export function generateRegistry<
         const loader = modulesGlob[path] as ImportedModule;
 
         keys.push(route);
+        // _components.push([route, lazy(loader)]);
 
-        _components.push([route, lazy(loader)]);
-        _exports.push([route, loader()]);
+        _components.push([route, lazy(() => loader())]);
+        // by not invoking loader at registry compile time, we prevent vite it from
+        // preloading at runtime. Instead the loader is called and module is requested
+        // at access time
+        _exports.push([route, loader]);
         const metaLoader = metadataGlob[
             path.replace(".mdx", ".meta.ts") as keyof typeof metadataGlob
         ] as MetaType;
@@ -243,7 +247,7 @@ abstract class AbstractRegistry<
         Key,
         React.LazyExoticComponent<React.ComponentType>
     >,
-    Exports extends Record<Key, unknown>,
+    Exports extends Record<Key, () => unknown>,
     Metadata extends Record<Key, unknown>,
 > {
     /**
@@ -358,7 +362,7 @@ abstract class AbstractRegistry<
      * Retrieve raw module exports for a route
      */
     public getExport(key: Key): Exports[Key] {
-        return this.get(this.exports, key);
+        return this.exports[key]() as Exports[Key];
     }
 
     /**
@@ -390,7 +394,7 @@ export class Registry<
         RouteKey<Modules, Root, Virtual>,
         React.LazyExoticComponent<React.ComponentType>
     >,
-    Record<RouteKey<Modules, Root, Virtual>, unknown>,
+    Record<RouteKey<Modules, Root, Virtual>, () => unknown>,
     Record<RouteKey<Modules, Root, Virtual>, MetaType>
 > {
     readonly keys: RouteKey<Modules, Root, Virtual>[];
@@ -400,7 +404,7 @@ export class Registry<
         React.LazyExoticComponent<React.ComponentType>
     >;
 
-    readonly exports: Record<RouteKey<Modules, Root, Virtual>, unknown>;
+    readonly exports: Record<RouteKey<Modules, Root, Virtual>, () => unknown>;
 
     readonly metadata: Record<RouteKey<Modules, Root, Virtual>, MetaType>;
 
