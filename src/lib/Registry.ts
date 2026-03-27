@@ -200,6 +200,10 @@ export function generateRegistry<
         // _components.push([route, lazy(loader)]);
 
         _components.push([route, lazy(() => loader())]);
+        // 'eagerly' importing from a module means vite would build a object map
+        // at build time containing that particular import from the module.
+        // so the build would have a map/record containing each exported metadata object
+        //
         // by not invoking loader at registry compile time, we prevent vite it from
         // preloading at runtime. Instead the loader is called and module is requested
         // at access time
