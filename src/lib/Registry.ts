@@ -119,7 +119,12 @@ export type RegistryOptions<
      * Virtual route mount point
      */
     // virtual: PathCheck<Virtual>;
-    virtual: Virtual;
+    virtual: Virtual /**
+     * Extension for the file containing metadata object including the preceeding period (`.`)
+     * @default
+     * .meta.ts
+     */;
+    meta_extension?: string;
 };
 
 /**
@@ -141,6 +146,7 @@ export function generateRegistry<
     metadataGlob,
     root,
     virtual,
+    meta_extension = ".meta.ts",
 }: RegistryOptions<MetaType, Modules, Root, Virtual>): {
     /**
      * List of route keys
@@ -209,7 +215,7 @@ export function generateRegistry<
         // at access time
         _exports.push([route, loader]);
         const metaLoader = metadataGlob[
-            path.replace(".mdx", ".meta.ts") as keyof typeof metadataGlob
+            path.replace(".mdx", meta_extension) as keyof typeof metadataGlob
         ] as MetaType;
 
         _metadata.push([route, { __splat: route, ...metaLoader }]);
