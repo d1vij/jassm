@@ -1,4 +1,5 @@
-import { cn, useClipboardText } from "@d1vij/shit-i-always-use";
+import { cn } from "@d1vij/shit-i-always-use";
+import { useClipboardText } from "@d1vij/shit-i-always-use/react";
 import { useEffect, useRef, useState } from "react";
 import { useStyles } from "@/lib/StyleContext";
 import type { ElementProps, HeaderLevels, JSX } from "./types";

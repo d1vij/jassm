@@ -1,8 +1,8 @@
+import { cn } from "@d1vij/shit-i-always-use";
 import {
-    cn,
     type StateSetterFunction,
     useClipboardText,
-} from "@d1vij/shit-i-always-use";
+} from "@d1vij/shit-i-always-use/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStyles } from "@/lib/StyleContext";
 import type { ElementProps, JSX } from "./types";
